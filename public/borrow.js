@@ -22,14 +22,17 @@ document.addEventListener("DOMContentLoaded", () => {
         })
             .then(response => response.json())
             .then(data => {
+                const messageDiv = document.getElementById('message');
                 if (data.success) {
-                    showMessagePopup("Borrow is successfull");
+                    messageDiv.innerHTML = `<p style="color:green;">${data.message}</p>`;
+
                 } else {
-                    showMessagePopup("Borrow is Not successfull");
+                    messageDiv.innerHTML = `<p style="color:green;">${data.message}</p>`;
                 }
             })
             .catch(error => {
-                showMessagePopup("Error Borrowing component");
+                console.error("Error:", error);
+                document.getElementById('message').innerHTML = "<p style='color:red;'>Error returning component.</p>";
             })
     })
 })

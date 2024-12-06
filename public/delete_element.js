@@ -17,23 +17,15 @@ document.addEventListener("DOMContentLoaded",()=>{
         })
         .then(response => response.json()) 
         .then(data => {
-            if (data.success) {
-                showMessagePopup("Delete is successfull");
-            } else {
-                showMessagePopup("Delete is Not successfull");
-            }
-        })
-        .catch(error => {
-            showMessagePopup("Error deleting component");
+          const messageDiv = document.getElementById('message');
+if (data.success) {
+    messageDiv.innerHTML = `<p style="color:green;">${data.message}</p>`;
+} else {
+    messageDiv.innerHTML = `<p style="color:red;">${data.message}</p>`;
+}}).catch(error => {
+            console.error("Error:", error);
+            document.getElementById('message').innerHTML = "<p style='color:red;'>Error returning component.</p>";
         });
     });
-    function showMessagePopup(message) {
-         const messagePopup = document.getElementById("DmessagePopup");
-         messagePopup.innerHTML =message;
-        messagePopup.style.display = "block";  
-        setTimeout(() => {
-            messagePopup.style.display = "none";
-        }, 1000);
-    }
 })
 

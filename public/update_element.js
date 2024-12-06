@@ -1,4 +1,4 @@
-document.getElementById("updateForm").addEventListener("submit", function(e) {
+document.getElementById("updateForm").addEventListener("submit", function (e) {
     e.preventDefault();
 
     const component_name = document.getElementById("component_name").value;
@@ -21,27 +21,17 @@ document.getElementById("updateForm").addEventListener("submit", function(e) {
             quantity: quantity
         })
     })
-    .then(response => response.json()) 
-    .then(data => {
-        if (data.success) {
-            UshowMessagePopup("Component updated successfully!", 'green');
-        } else {
-            UshowMessagePopup("Error updating component", 'red');
-        }
-    })
-    .catch(error => {
-        UshowMessagePopup(error, 'red');
-    });
+        .then(response => response.json())
+        .then(data => {
+            const messageDiv = document.getElementById('message');
+            if (data.success) {
+                messageDiv.innerHTML = `<p style="color:green;">${data.message}</p>`;
+            } else {
+                messageDiv.innerHTML = `<p style="color:green;">${data.message}</p>`;
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            document.getElementById('message').innerHTML = "<p style='color:red;'>Error returning component.</p>";
+        });
 });
-
-function UshowMessagePopup(message, color) {
-    const UmessagePopup = document.getElementById("UmessagePopup");
-    UmessagePopup.style.display = "block";
-    UmessagePopup.style.color = color;
-    UmessagePopup.innerHTML = `<span class="font-medium">${message}</span>`;
-    
-    // Hide the popup after 2 seconds
-    setTimeout(() => {
-        UmessagePopup.style.display = "none";
-    }, 2000);
-}

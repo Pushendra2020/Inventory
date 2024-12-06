@@ -1,7 +1,3 @@
-// const form = document.getElementById('form');
-
-// const submit =document.getElementById("submit");
-
 document.getElementById("form").addEventListener("submit", function(e) {
     e.preventDefault();
     
@@ -18,24 +14,22 @@ document.getElementById("form").addEventListener("submit", function(e) {
             })
         })
         .then(response => {
-            if (response.ok) {
-                showMessagePopup("Component added successfully",'green');
-            } else {
-                showMessagePopup("Error inserting component", 'red');
-            }
-        })
-        .catch(error=> {
-            showMessagePopup("error", 'red');
-        });
-        
-        function showMessagePopup(message, color) {
-            const messagePopup = document.getElementById("messagePopup");
-            messagePopup.innerHTML =message;
-            messagePopup.style.backgroundColor = color;
-            messagePopup.style.display = "block";
-            setTimeout(() => {
-                messagePopup.style.display = "none";
-            }, 2000);
+           const messageDiv = document.getElementById('message');
+if (response.ok) {
+    response.json().then(data => {
+        if (data.success) {
+            messageDiv.innerHTML = `<p style="color:green;">Component added is successfully</p>`;
+        } else {
+            messageDiv.innerHTML = `<p style="color:red;">${data.message}</p>`;
         }
     });
-// })
+} else {
+    messageDiv.innerHTML = `<p style="color:red;">${response.statusText}</p>`;
+}
+}).catch(error=> {
+            console.error("Error:", error);
+            document.getElementById('message').innerHTML = "<p style='color:red;'>Error returning component.</p>";
+        });
+        
+    });
+

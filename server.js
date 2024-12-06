@@ -58,7 +58,8 @@ app.post("/addData", (req, res) => {
             }
 
             console.log("Component added is successfully");
-            return res.status(200).json({ success: true, message: "Component added is successfully" });
+            return res.json({ success: true, message: "Component added is successfully" });
+            //res.json({ success: true, message: "Component returned successfully." });
         });
     });
 });
@@ -86,7 +87,7 @@ app.post("/deleteData", (req, res) => {
                 return res.status(500).json({ success: false, message: "Error deleting component" });
             }
 
-            // return res.status(200).json({ success: true, message: "Component deleted successfully" });
+            return res.status(200).json({ success: true, message: "Component deleted successfully" });
         });
     });
 });
@@ -104,9 +105,9 @@ app.post("/updateData", (req, res) => {
             return res.status(500).json({ success: false, message: "Error updating component" }
             );
         }
-        // return res.status(200).json({ success: true, message: "Component updated successfully" }
-        // );
         console.log( "Component updated successfully");
+         return res.status(200).json({ success: true, message: "Component updated successfully" }
+         );
     });
 
 })
@@ -169,13 +170,15 @@ app.get("/detailData", (req, res) => {
                 if (existingUser) {
                     existingUser.components.push({                      
                         component_name: row.component_name,
-                        quantity: row.quantity                    
+                        quantity: row.quantity,
+                        borrow_date:row.borrow_date,                 
                     });
                 } else {
                     acc.push({
                         user_name: row.user_name,
                         prn: row.prn,
                         components: [{
+                            borrow_date:row.borrow_date,
                             component_name: row.component_name,
                             quantity: row.quantity
                         }]
@@ -310,13 +313,15 @@ app.get("/returnShowData", (req, res) => {
                 if (existingUser) {
                     existingUser.components.push({                      
                         component_name: row.component_name,
-                        quantity: row.quantity                    
+                        quantity: row.quantity ,
+                        return_date: row.return_date
                     });
                 } else {
                     acc.push({
                         user_name: row.user_name,
                         prn: row.prn,
                         components: [{
+                            return_date:row.return_date,
                             component_name: row.component_name,
                             quantity: row.quantity
                         }]
