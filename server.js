@@ -111,6 +111,227 @@ app.post("/updateData", (req, res) => {
 
 })
 
+
+app.post('/borrowData', (req, res) => {
+    const { user_name, prn, component_name, quantity } = req.body;
+    db.query('SELECT * FROM total_inventory WHERE component_name = ?', [component_name], (err, results) => {
+        if (err) {
+            console.error('Error fetching component:', err);
+            return res.status(500).json({ success: false, message: 'Error fetching component' });
+        }
+
+        if (results.length === 0) {
+            return res.status(400).json({ success: false, message: 'Component not found' });
+        }
+
+        const component = results[0];
+
+        if (component.quantity < quantity) {
+            return res.status(400).json({ success: false, message: 'Not enough stock available' });
+        }
+
+        db.query(
+            'INSERT INTO borrow (prn, user_name, component_name, quantity) VALUES (?, ?, ?, ?)',
+            [prn, user_name, component_name, quantity],
+            (err, result) => {
+                if (err) {
+                    console.error('Error inserting borrow record:', err);
+                    return res.status(500).json({ success: false, message: 'Error borrowing component' });
+                }
+                db.query(
+                    'UPDATE total_inventory SET quantity = quantity - ? WHERE component_name = ?',
+                    [quantity, component_name],
+                    (err, updateResult) => {
+                        if (err) {
+                            console.error('Error updating inventory:', err);
+                            return res.status(500).json({ success: false, message: 'Error updating inventory' });
+                        }
+                        return res.json({
+                            success: true,
+                            message: 'Component borrowed successfully',
+                        });
+                    }
+                );
+            }
+        );
+    });
+});
+
+app.get("/detailData", (req, res) => {
+    const sql = "SELECT * FROM borrow ORDER BY prn";
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error(err.message);
+            res.status(500).send("Error fetching data");
+        } else {
+            const groupedData = results.reduce((acc, row) => {
+                const existingUser = acc.find(item => item.prn === row.prn);
+                if (existingUser) {
+                    existingUser.components.push({                      
+                        component_name: row.component_name,
+                        quantity: row.quantity                    
+                    });
+                } else {
+                    acc.push({
+                        user_name: row.user_name,
+                        prn: row.prn,
+                        components: [{
+                            component_name: row.component_name,
+                            quantity: row.quantity
+                        }]
+                    });
+                }
+                
+                return acc;
+            }, []);
+            
+            res.json(groupedData);
+        }
+    });
+});
+
+// Endpoint to handle the return of components
+app.post("/returnComponent", (req, res) => {
+    const { prn, component_name, quantity } = req.body;
+
+    if (!prn || !component_name || !quantity) {
+        return res.status(400).json({ success: false, message: "Missing required fields." });
+    }
+
+    // Start a transaction to ensure both updates (inventory and borrow -> return) happen atomically
+    db.beginTransaction((err) => {
+        if (err) {
+            return res.status(500).json({ success: false, message: "Error starting transaction." });
+        }
+
+        // First, fetch the current borrow record for the component
+        const fetchBorrowQuery = "SELECT quantity FROM borrow WHERE prn = ? AND component_name = ?";
+        db.query(fetchBorrowQuery, [prn, component_name], (err, result) => {
+            if (err) {
+                return db.rollback(() => {
+                    res.status(500).json({ success: false, message: "Error fetching borrow data." });
+                });
+            }
+
+            if (result.length === 0) {
+                return db.rollback(() => {
+                    res.status(404).json({ success: false, message: "No borrow record found for this component." });
+                });
+            }
+
+            const borrowedQuantity = result[0].quantity;
+
+            // Check if the returned quantity is more than what was borrowed
+            if (quantity > borrowedQuantity) {
+                return db.rollback(() => {
+                    res.status(400).json({ success: false, message: "Returned quantity cannot exceed borrowed quantity." });
+                });
+            }
+
+            // Update the total_inventory table (increase quantity of the returned component)
+            const updateInventoryQuery = "UPDATE total_inventory SET quantity = quantity + ? WHERE component_name = ?";
+            db.query(updateInventoryQuery, [quantity, component_name], (err, result) => {
+                if (err) {
+                    return db.rollback(() => {
+                        res.status(500).json({ success: false, message: "Error updating inventory." });
+                    });
+                }
+
+                // Move the borrow record to the return_table
+                const insertReturnQuery = "INSERT INTO return_table (prn, user_name, component_name, quantity) SELECT prn, user_name, component_name, ? FROM borrow WHERE prn = ? AND component_name = ?";
+                db.query(insertReturnQuery, [quantity, prn, component_name], (err, result) => {
+                    if (err) {
+                        return db.rollback(() => {
+                            res.status(500).json({ success: false, message: "Error inserting return record." });
+                        });
+                    }
+
+                    // Update the remaining quantity in the borrow table
+                    const remainingQuantity = borrowedQuantity - quantity;
+                    if (remainingQuantity > 0) {
+                        // If there are remaining components, update the borrow table
+                        const updateBorrowQuery = "UPDATE borrow SET quantity = ? WHERE prn = ? AND component_name = ?";
+                        db.query(updateBorrowQuery, [remainingQuantity, prn, component_name], (err, result) => {
+                            if (err) {
+                                return db.rollback(() => {
+                                    res.status(500).json({ success: false, message: "Error updating borrow record." });
+                                });
+                            }
+
+                            // Commit the transaction if all queries were successful
+                            db.commit((err) => {
+                                if (err) {
+                                    return db.rollback(() => {
+                                        res.status(500).json({ success: false, message: "Error committing transaction." });
+                                    });
+                                }
+
+                                res.json({ success: true, message: "Component returned successfully." });
+                            });
+                        });
+                    } else {
+                        // If no remaining components, delete the borrow record
+                        const deleteBorrowQuery = "DELETE FROM borrow WHERE prn = ? AND component_name = ?";
+                        db.query(deleteBorrowQuery, [prn, component_name], (err, result) => {
+                            if (err) {
+                                return db.rollback(() => {
+                                    res.status(500).json({ success: false, message: "Error deleting borrow record." });
+                                });
+                            }
+
+                            // Commit the transaction if all queries were successful
+                            db.commit((err) => {
+                                if (err) {
+                                    return db.rollback(() => {
+                                        res.status(500).json({ success: false, message: "Error committing transaction." });
+                                    });
+                                }
+
+                                res.json({ success: true, message: "Component returned successfully." });
+                            });
+                        });
+                    }
+                });
+            });
+        });
+    });
+});
+
+
+app.get("/returnShowData", (req, res) => {
+    const sql = "SELECT * FROM return_table ORDER BY prn";
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error(err.message);
+            res.status(500).send("Error fetching data");
+        } else {
+            const groupedData = results.reduce((acc, row) => {
+                const existingUser = acc.find(item => item.prn === row.prn);
+                if (existingUser) {
+                    existingUser.components.push({                      
+                        component_name: row.component_name,
+                        quantity: row.quantity                    
+                    });
+                } else {
+                    acc.push({
+                        user_name: row.user_name,
+                        prn: row.prn,
+                        components: [{
+                            component_name: row.component_name,
+                            quantity: row.quantity
+                        }]
+                    });
+                }
+                
+                return acc;
+            }, []);
+            
+            res.json(groupedData);
+        }
+    });
+});
+
+
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 })

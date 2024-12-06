@@ -2,41 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-
-.imga{
-    background-image: url('/photos/images.jpg');
-    background-size: cover;
-}
-
-/* Add spacing for table cells */
 table {
     width: 100%;
     border-collapse: collapse;
 }
-
-/* Add border to table cells */
 th, td {
     border: 1px solid #ddd;
     padding: 8px;
     text-align: left;
 }
-
-/* Style the header row */
 thead {
     background-color: #f4f4f4;
 }
-
-/* Style the row on hover */
 tr:hover {
     background-color: #f1f1f1;
 }
-
-/* Add some padding to the overall table container */
 .relative {
     padding: 16px;
 }
-
-/* For dark mode styling */
 .dark th, .dark td {
     color: white;
     border-color: #555;
