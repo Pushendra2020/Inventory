@@ -24,15 +24,24 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(data => {
                 const messageDiv = document.getElementById('message');
                 if (data.success) {
-                    messageDiv.innerHTML = `<p style="color:green;">${data.message}</p>`;
+                    messageDiv.innerHTML = `<p class="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400">${data.message}</p>`;
+                    popup(messageDiv,2000)
 
                 } else {
-                    messageDiv.innerHTML = `<p style="color:green;">${data.message}</p>`;
+                    messageDiv.innerHTML = `<p class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400">${data.message}</p>`; 
+                    popup(messageDiv,2000)
                 }
             })
             .catch(error => {
                 console.error("Error:", error);
-                document.getElementById('message').innerHTML = "<p style='color:red;'>Error returning component.</p>";
+                document.getElementById('message').innerHTML = `<p class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400">Error returning component.</p>`;
+                popup(messageDiv,2000)
             })
     })
 })
+
+function popup(messageDiv,duration){
+    setTimeout(() => {
+        messageDiv.innerHTML = '';
+    }, duration);
+}

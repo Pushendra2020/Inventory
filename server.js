@@ -58,7 +58,7 @@ app.post("/addData", (req, res) => {
 
             console.log("Component added is successfully");
             return res.json({ success: true, message: "Component added is successfully" });
-            //res.json({ success: true, message: "Component returned successfully." });
+           
         });
     });
 });
@@ -86,7 +86,7 @@ app.post("/deleteData", (req, res) => {
                 return res.status(500).json({ success: false, message: "Error deleting component" });
             }
 
-            return res.status(200).json({ success: true, message: "Component deleted successfully" });
+            return res.json({ success: true, message: "Component deleted successfully" });
         });
     });
 });
@@ -105,7 +105,7 @@ app.post("/updateData", (req, res) => {
             );
         }
         console.log( "Component updated successfully");
-         return res.status(200).json({ success: true, message: "Component updated successfully" }
+         return res.json({ success: true, message: "Component updated successfully" }
          );
     });
 

@@ -35,7 +35,7 @@ const detailsTable = document.getElementById("returnTable");
 let tableData = [];
 async function fetchData() {
     try {
-        const response = await fetch("/detailData");
+        const response = await fetch("/returnShowData");
         const data = await response.json();
         tableData = data;
         renderTable(tableData);
@@ -57,13 +57,13 @@ function renderTable(data) {
                                         <td class="px-4 py-4" rowspan="${item.components.length}">${item.prn}</td>
                                         <td class="px-4 py-4">${component.component_name}</td>
                                         <td class="px-6 py-4">${component.quantity}</td>
-                                        <td class="px-6 py-4">${component.borrow_date}</td>
+                                        <td class="px-6 py-4">${component.return_date}</td>
                                     `;
             } else {
                 row.innerHTML = `
                                         <td class="px-4 py-4">${component.component_name}</td>
                                         <td class="px-6 py-4">${component.quantity}</td>
-                                        <td class="px-6 py-4">${component.borrow_date}</td>
+                                        <td class="px-6 py-4">${component.return_date}</td>
                                     `;
             }
 
