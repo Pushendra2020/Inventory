@@ -1,7 +1,6 @@
 const mysql = require('mysql2');
 const express = require('express');
 const app = express();
-const bodyParser = require('body-parser');
 const port = 5500;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
@@ -193,21 +192,16 @@ app.get("/detailData", (req, res) => {
     });
 });
 
-// Endpoint to handle the return of components
 app.post("/returnComponent", (req, res) => {
     const { prn, component_name, quantity } = req.body;
 
     if (!prn || !component_name || !quantity) {
         return res.status(400).json({ success: false, message: "Missing required fields." });
     }
-
-    // Start a transaction to ensure both updates (inventory and borrow -> return) happen atomically
     db.beginTransaction((err) => {
         if (err) {
             return res.status(500).json({ success: false, message: "Error starting transaction." });
         }
-
-        // First, fetch the current borrow record for the component
         const fetchBorrowQuery = "SELECT quantity FROM borrow WHERE prn = ? AND component_name = ?";
         db.query(fetchBorrowQuery, [prn, component_name], (err, result) => {
             if (err) {
@@ -223,15 +217,11 @@ app.post("/returnComponent", (req, res) => {
             }
 
             const borrowedQuantity = result[0].quantity;
-
-            // Check if the returned quantity is more than what was borrowed
             if (quantity > borrowedQuantity) {
                 return db.rollback(() => {
                     res.status(400).json({ success: false, message: "Returned quantity cannot exceed borrowed quantity." });
                 });
             }
-
-            // Update the total_inventory table (increase quantity of the returned component)
             const updateInventoryQuery = "UPDATE total_inventory SET quantity = quantity + ? WHERE component_name = ?";
             db.query(updateInventoryQuery, [quantity, component_name], (err, result) => {
                 if (err) {
@@ -239,8 +229,6 @@ app.post("/returnComponent", (req, res) => {
                         res.status(500).json({ success: false, message: "Error updating inventory." });
                     });
                 }
-
-                // Move the borrow record to the return_table
                 const insertReturnQuery = "INSERT INTO return_table (prn, user_name, component_name, quantity) SELECT prn, user_name, component_name, ? FROM borrow WHERE prn = ? AND component_name = ?";
                 db.query(insertReturnQuery, [quantity, prn, component_name], (err, result) => {
                     if (err) {
@@ -248,11 +236,8 @@ app.post("/returnComponent", (req, res) => {
                             res.status(500).json({ success: false, message: "Error inserting return record." });
                         });
                     }
-
-                    // Update the remaining quantity in the borrow table
                     const remainingQuantity = borrowedQuantity - quantity;
                     if (remainingQuantity > 0) {
-                        // If there are remaining components, update the borrow table
                         const updateBorrowQuery = "UPDATE borrow SET quantity = ? WHERE prn = ? AND component_name = ?";
                         db.query(updateBorrowQuery, [remainingQuantity, prn, component_name], (err, result) => {
                             if (err) {
@@ -260,8 +245,6 @@ app.post("/returnComponent", (req, res) => {
                                     res.status(500).json({ success: false, message: "Error updating borrow record." });
                                 });
                             }
-
-                            // Commit the transaction if all queries were successful
                             db.commit((err) => {
                                 if (err) {
                                     return db.rollback(() => {
@@ -273,7 +256,6 @@ app.post("/returnComponent", (req, res) => {
                             });
                         });
                     } else {
-                        // If no remaining components, delete the borrow record
                         const deleteBorrowQuery = "DELETE FROM borrow WHERE prn = ? AND component_name = ?";
                         db.query(deleteBorrowQuery, [prn, component_name], (err, result) => {
                             if (err) {
@@ -282,7 +264,6 @@ app.post("/returnComponent", (req, res) => {
                                 });
                             }
 
-                            // Commit the transaction if all queries were successful
                             db.commit((err) => {
                                 if (err) {
                                     return db.rollback(() => {
