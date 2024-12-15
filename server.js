@@ -4,6 +4,7 @@ const app = express();
 const port = 5500;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
+app.use(express.json());
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
@@ -32,7 +33,7 @@ app.get("/data", (req, res) => {
 
 
 app.post("/addData", (req, res) => {
-    const { component_name, quantity } = req.body;
+    const { component_name, quantity,descrip,link } = req.body;
 
     if (!component_name || !quantity) {
         return res.status(400).json({ success: false, message: "Component name and quantity are required." });
@@ -49,8 +50,8 @@ app.post("/addData", (req, res) => {
             return res.status(400).json({ success: false, message: "Component already exists" });
         }
 
-        const insertQuery = 'INSERT INTO total_inventory (component_name, quantity) VALUES (?, ?)';
-        db.query(insertQuery, [component_name, quantity], (err, result) => {
+        const insertQuery = 'INSERT INTO total_inventory (component_name, quantity,descrip,link) VALUES (?, ?,?,?)';
+        db.query(insertQuery, [component_name, quantity,descrip,link], (err, result) => {
             if (err) {
                 console.error(err.message);
                 return res.status(500).json({ success: false, message: "Error inserting component" });
@@ -63,34 +64,22 @@ app.post("/addData", (req, res) => {
     });
 });
 
-app.post("/deleteData", (req, res) => {
+app.post('/remove', (req, res) => {
+    console.log(req.body);
     const { component_name } = req.body;
-
     if (!component_name) {
-        return res.status(400).json({ success: false, message: "Component name is required" });
+        return res.status(400).send('Component name is required.');
     }
-
-    const checkQuery = 'SELECT * FROM total_inventory WHERE component_name = ?';
-    db.query(checkQuery, [component_name], (err, results) => {
+    const query = 'DELETE FROM total_inventory WHERE component_name = ?'; // Replace 'inventory' with your table name
+    db.query(query, [component_name], (err, results) => {
         if (err) {
-            return res.status(500).json({ success: false, message: "Error checking component" });
+            console.error(err);
+            res.status(500).send('Failed to delete item.');
+        } else {
+            res.status(200).send('Item deleted successfully.');
         }
-
-        if (results.length === 0) {
-            return res.status(400).json({ success: false, message: "Component not found" });
-        }
-
-        const deleteQuery = 'DELETE FROM total_inventory WHERE component_name = ?';
-        db.query(deleteQuery, [component_name], (err, result) => {
-            if (err) {
-                return res.status(500).json({ success: false, message: "Error deleting component" });
-            }
-
-            return res.json({ success: true, message: "Component deleted successfully" });
-        });
     });
 });
-
 
 app.post("/updateData", (req, res) => {
     const { component_name, quantity } = req.body;
